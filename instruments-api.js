@@ -36,6 +36,16 @@ app.post('/instruments', function(req, res, next) {
   // TODO: Check required
   // TODO: Pick required
 
+  const missingFields = checkRequiredFields(
+    ['_id', 'name', 'type', 'category', 'group', 'retailPrice', 'manufacturer'],
+    newInstrument
+  )
+
+  if (not(isEmpty(missingFields))) {
+    next(new NodeHTTPError(400, `${createMissingFieldsMsg(missingFields)}`))
+    return
+  }
+
   addInstrument(newInstrument, function(err, data) {
     if (err) {
       next(

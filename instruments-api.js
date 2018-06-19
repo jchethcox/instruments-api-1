@@ -1,12 +1,37 @@
+const port = process.env.PORT || 5000
+const { getInstrument, addInstrument } = require('./dal')
+let database = require('./load-data')
+
 require('dotenv').config()
 const express = require('express')
 const app = express()
-const port = process.env.PORT || 5000
+const {
+  find,
+  isEmpty,
+  propOr,
+  append,
+  merge,
+  not,
+  isNil,
+  filter,
+  compose,
+  reject,
+  propEq,
+  map,
+  pathOr,
+  split,
+  head,
+  last,
+  path
+} = require('ramda')
+
 const bodyParser = require('body-parser')
-const { getInstrument, addInstrument } = require('./dal')
-const NodeHTTPError = require('node-http-error')
-const { propOr, isEmpty } = require('ramda')
-let database = require('./load-data')
+const checkRequiredFields = require('./lib/check-required-fields')
+const createMissingFieldsMsg = require('./lib/create-missing-field-msg')
+const cleanObj = require('./lib/clean-obj')
+const stringToNum = require('./lib/string-to-num')
+const stringToBool = require('./lib/string-to-bool')
+const nodeHTTPError = require('node-http-error')
 
 const isInstrumentInDatabase = (_id, database) =>
   compose(

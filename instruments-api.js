@@ -87,6 +87,45 @@ app.delete('/instruments/:id', function(req, res, next) {
   }
 })
 
+app.put('instruments/:id', function(req, res, next) {
+  const newInstrument = propOr({}, 'body', req)
+
+  if (isEmpty(newInstrument)) {
+    next(new NodeHTTPError(400, 'Empty Muffucka'))
+    return
+  }
+  const missingFields = checkRequiredFields(
+    ['name', 'type', 'category', 'group', 'retailPrice', 'manufacturer'],
+    newInstrument
+  )
+  if (not(isEmpty(missingFields))) {
+    next(new NodeHTTPError(400, `${createMissingFieldsMsg(missingFields)}`))
+    return
+  }
+  if (not(propEq('id', req.params.id, newInstrument))) {
+    next(new NodeHTTPError(400, 'This id doesnt match the URI path id value'))
+    return
+  }
+
+  const newNewInstrument = cleanObj(
+    ['name', 'type', 'category', 'group', 'retailPrice', 'manufacturer'],
+    newInstrument
+  )
+
+  if (isInstrumentInDatabase(req.params.id, database)) {
+    database = map(
+      obj =>
+        obj.id === req.params.id && obj.type === 'instrument'
+          ? newNewInstrument
+          : obj,
+      database
+    )
+    res.status(200).send('the instrument was updated')
+  } else {
+    next(new NodeHTTPError(404, 'Instrument not found'))
+  }
+})
+
 app.use(function(err, req, res, next) {
   console.log(
     'ERROR! ',

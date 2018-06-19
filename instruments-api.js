@@ -6,6 +6,7 @@ const bodyParser = require('body-parser')
 const { getInstrument, addInstrument } = require('./dal')
 const NodeHTTPError = require('node-http-error')
 const { propOr, isEmpty } = require('ramda')
+let database = require('./load-data')
 
 app.use(bodyParser.json())
 
@@ -37,7 +38,7 @@ app.post('/instruments', function(req, res, next) {
   // TODO: Pick required
 
   const missingFields = checkRequiredFields(
-    ['_id', 'name', 'type', 'category', 'group', 'retailPrice', 'manufacturer'],
+    ['name', 'type', 'category', 'group', 'retailPrice', 'manufacturer'],
     newInstrument
   )
 
@@ -45,6 +46,19 @@ app.post('/instruments', function(req, res, next) {
     next(new NodeHTTPError(400, `${createMissingFieldsMsg(missingFields)}`))
     return
   }
+
+  const newNewInstrument = merge(
+    cleanObj(
+      ['name', 'type', 'category', 'group', 'retailPrice', 'manufacturer'],
+      newInstrument
+    ),
+    {
+      _id: newInstrument.pkGen,
+      type: 'instrument'
+    }
+  )
+  database = append(newNewInstrument, database)
+  res.status(201).send({ ok: true, data: newNewInstrument })
 
   addInstrument(newInstrument, function(err, data) {
     if (err) {

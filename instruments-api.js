@@ -1,6 +1,6 @@
 const port = process.env.PORT || 5000
-const { getInstrument, addInstrument } = require('./dal')
-let database = require('./load-data')
+const { getInstrument, addInstrument, deleteInstrument } = require('./dal')
+// let database = require('./load-data')
 
 require('dotenv').config()
 const express = require('express')
@@ -29,9 +29,7 @@ const bodyParser = require('body-parser')
 const checkRequiredFields = require('./lib/check-required-fields')
 const createMissingFieldsMsg = require('./lib/create-missing-field-msg')
 const cleanObj = require('./lib/clean-obj')
-const stringToNum = require('./lib/string-to-num')
-const stringToBool = require('./lib/string-to-bool')
-const nodeHTTPError = require('node-http-error')
+const NodeHTTPError = require('node-http-error')
 
 const isInstrumentInDatabase = (_id, database) =>
   compose(
@@ -61,55 +59,43 @@ app.get('/instruments/:instrumentID', function(req, res, next) {
 app.post('/instruments', function(req, res, next) {
   const newInstrument = propOr({}, 'body', req)
 
-  console.log('instrument', newInstrument)
-
   if (isEmpty(newInstrument)) {
-    next(new NodeHTTPError(400, 'missing instrument in body.'))
+    next(new NodeHTTPError(400, 'missing instrument in body'))
+    return
   }
 
-  // TODO: Check required
-  // TODO: Pick required
-
   const missingFields = checkRequiredFields(
-    ['name', 'type', 'category', 'group', 'retailPrice', 'manufacturer'],
+    ['name', 'category', 'group', 'retailPrice', 'manufacturer'],
     newInstrument
   )
 
   if (not(isEmpty(missingFields))) {
-    next(new NodeHTTPError(400, `${createMissingFieldsMsg(missingFields)}`))
+    next(new NodeHTTPError(400, 'missing field(s) in body'))
     return
   }
 
-  const newNewInstrument = merge(
-    cleanObj(
-      ['name', 'type', 'category', 'group', 'retailPrice', 'manufacturer'],
-      newInstrument
-    ),
-    {
-      _id: newInstrument.pkGen,
-      type: 'instrument'
-    }
+  const cleanedInstrument = cleanObj(
+    ['name', 'category', 'group', 'retailPrice', 'manufacturer'],
+    newInstrument
   )
-  database = append(newNewInstrument, database)
-  res.status(201).send({ ok: true, data: newNewInstrument })
 
-  addInstrument(newInstrument, function(err, data) {
+  addInstrument(cleanedInstrument, function(err, data) {
     if (err) {
-      next(
-        new NodeHTTPError(err.status, err.message, { max: 'is the coolest' })
-      )
+      next(new NodeHTTPError(err.status, err.message, { error: 'error here' }))
     }
     res.status(201).send(data)
   })
 })
 
 app.delete('/instruments/:id', function(req, res, next) {
-  if (isInstrumentInDatabase(req.params.id, database)) {
-    database = reject(instrument => instrument.id === req.params.id, database)
-    res.status(200).send('instrument deleted')
-  } else {
-    next(new NodeHTTPError(404, 'instrument not found'))
-  }
+  const instrumentID = req.params.id
+  deleteInstrument(instrumentID, function(err, data) {
+    if (err) {
+      next(new NodeHTTPError(err.status, err.message, err))
+      return
+    }
+    res.status(200).send(data)
+  })
 })
 
 app.put('instruments/:id', function(req, res, next) {
@@ -120,7 +106,16 @@ app.put('instruments/:id', function(req, res, next) {
     return
   }
   const missingFields = checkRequiredFields(
-    ['name', 'type', 'category', 'group', 'retailPrice', 'manufacturer'],
+    [
+      '=id',
+      '_rev',
+      'name',
+      'type',
+      'category',
+      'group',
+      'retailPrice',
+      'manufacturer'
+    ],
     newInstrument
   )
   if (not(isEmpty(missingFields))) {

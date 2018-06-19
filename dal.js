@@ -15,6 +15,22 @@ const db = new PouchDB(
 
 const getInstrument = (id, callback) => db.get(id, callback)
 
+const deleteInstrument = (instrumentID, callback) => {
+  db.get(instrumentID, function(err, doc) {
+    if (err) {
+      callback(err)
+      return
+    }
+    db.remove(doc, function(err, deleteResult) {
+      if (err) {
+        callback(err)
+        return
+      }
+      callback(null, deleteResult)
+    })
+  })
+}
+
 const addInstrument = (instrument, callback) => {
   console.log('HI Im inside addInstrument')
 
@@ -36,7 +52,8 @@ function getDoc(id, callback) {
 
 const dal = {
   getInstrument,
-  addInstrument
+  addInstrument,
+  deleteInstrument
 }
 
 module.exports = dal

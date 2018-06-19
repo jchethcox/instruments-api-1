@@ -8,6 +8,14 @@ const NodeHTTPError = require('node-http-error')
 const { propOr, isEmpty } = require('ramda')
 let database = require('./load-data')
 
+const isInstrumentInDatabase = (_id, database) =>
+  compose(
+    not,
+    isNil,
+    find(instrument => instrument.id === _id),
+    filter(propEq('type', 'instrument'))
+  )(database)
+
 app.use(bodyParser.json())
 
 app.get('/', function(req, res, next) {
@@ -68,6 +76,15 @@ app.post('/instruments', function(req, res, next) {
     }
     res.status(201).send(data)
   })
+})
+
+app.delete('/instruments/:id', function(req, res, next) {
+  if (isInstrumentInDatabase(req.params.id, database)) {
+    database = reject(instrument => instrument.id === req.params.id, database)
+    res.status(200).send('instrument deleted')
+  } else {
+    next(new NodeHTTPError(404, 'instrument not found'))
+  }
 })
 
 app.use(function(err, req, res, next) {

@@ -107,7 +107,7 @@ app.put('instruments/:id', function(req, res, next) {
   }
   const missingFields = checkRequiredFields(
     [
-      '=id',
+      '_id',
       '_rev',
       'name',
       'type',
@@ -132,18 +132,12 @@ app.put('instruments/:id', function(req, res, next) {
     newInstrument
   )
 
-  if (isInstrumentInDatabase(req.params.id, database)) {
-    database = map(
-      obj =>
-        obj.id === req.params.id && obj.type === 'instrument'
-          ? newNewInstrument
-          : obj,
-      database
-    )
-    res.status(200).send('the instrument was updated')
-  } else {
-    next(new NodeHTTPError(404, 'Instrument not found'))
-  }
+  replaceInstrument(cleanedInstrument, function(err, replaceResult) {
+    if (err) {
+      next(new NodeHTTPError(err.status, err.message, err))
+    }
+    res.status(200).send(replaceResult)
+  })
 })
 
 app.use(function(err, req, res, next) {
